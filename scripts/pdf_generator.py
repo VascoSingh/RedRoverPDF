@@ -1,10 +1,12 @@
 from reportlab.lib.pagesizes import letter
-from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import Paragraph, Spacer, PageBreak, Image, BaseDocTemplate, Frame, PageTemplate
 from reportlab.graphics.shapes import Drawing, String, Rect
 from reportlab.graphics.charts.barcharts import VerticalBarChart
 from reportlab.graphics.charts.piecharts import Pie
 from reportlab.lib.colors import HexColor
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
+
 import pandas as pd
 
 # Define color palette for pie charts
@@ -25,19 +27,25 @@ def generate_pdf(data, output_filename):
     frame = Frame(0, 0, letter[0], letter[1], id='normal')
     
     def on_each_page(canvas, doc):
-        # Draw the logo on each page
-        canvas.drawInlineImage("./data/RedRoverIcon.png", 520, 20, width=70, height=70)
-
         # Draw a red border
         border_color = HexColor("#993333")
-        border_thickness = 5
-        offset = 10
+        border_thickness = 2
+        offset = 40
         canvas.setStrokeColor(border_color)
         canvas.setLineWidth(border_thickness)
         canvas.rect(offset + border_thickness/2, 
                     offset + border_thickness/2, 
                     letter[0] - 2*offset - border_thickness, 
                     letter[1] - 2*offset - border_thickness)
+        
+        # Draw the logo on each page
+        canvas.drawInlineImage("./data/RedRoverIcon.png", 530, 15, width=70, height=70)
+
+        # Draw page number at the bottom center of the page
+        page_num = canvas.getPageNumber()
+        canvas.setFont("Helvetica-Bold", 15)
+        canvas.setFillColor(HexColor("#993333"))  # Set the fill color for the text
+        canvas.drawCentredString(letter[0] / 2.0, 15, f"{page_num}")
     
     template = PageTemplate(id='main', frames=frame, onPage=on_each_page)
     
@@ -53,15 +61,21 @@ def generate_pdf(data, output_filename):
 
     added_questions = set()
 
+    # Define a new style for the answer text
+    answer_style = ParagraphStyle(
+    'AnswerStyle', parent=styles['Heading2'], fontSize=20, alignment=TA_LEFT, leftIndent=80
+    )
+
     for (question, answer), group in grouped_data:
         # Add title page for the question if not already added
         if question not in added_questions:
             add_title_page(elements, data, question, styles)
             added_questions.add(question)
 
-        # Add "Answer: _____" text only once per answer
-        elements.append(Paragraph(f"Answer: {answer}", styles['Heading2']))
-        elements.append(Spacer(1, 12))
+        # Move the answer text 40 pixels down using spacers
+        elements.append(Spacer(-1, 40))
+        elements.append(Paragraph(f"Answer: {answer}", answer_style))
+        elements.append(Spacer(1, -20))  # Reset the position for other elements
 
         # Add demographic pie charts
         add_demographic_pie_charts(elements, group, styles)
@@ -73,12 +87,17 @@ def generate_pdf(data, output_filename):
     doc.build(elements)
 
 def add_title_page(elements, data, question, styles):
-    # Logo
-    logo = Image("./data/RedRoverIcon.png", width=150, height=150)
-    elements.append(logo)
+    # Modify the Question style to make it bigger and centered
+    centered_heading_style = ParagraphStyle(
+        'CenteredHeading', parent=styles['Heading1'], fontSize=24, alignment=TA_CENTER, leftIndent=100, rightIndent=100, topIndent=100
+    )
+    
+    # Add spacing to move the question text 50 pixels lower
+    elements.append(Spacer(1, 50))
     
     # Question
-    elements.append(Paragraph(question, styles['Heading1']))
+    elements.append(Paragraph(question, centered_heading_style))
+    elements.append(Spacer(1, 24))  # Add some spacing
     
     # Bar chart with overall responses
     question_data = data[data['question'] == question]
@@ -101,12 +120,17 @@ def add_demographic_pie_charts(elements, group, styles):
         elements.append(Spacer(1, 12))
 
 def generate_bar_chart(data):
-    drawing = Drawing(600, 300)
+    # Adjusting dimensions for a larger and centered bar chart
+    drawing = Drawing(500, 250)
     chart = VerticalBarChart()
-    chart.x = 120
+    chart.x = 115  # Adjusted for centering
     chart.y = 50
-    chart.height = 125
-    chart.width = 300
+    chart.height = 150  # Made larger
+    chart.width = 350  # Made larger
+
+    # Display number of votes at the top of each bar
+    chart.barLabelFormat = '%d'
+    chart.barLabels.nudge = 10  # Adjust to place the label above the bar
 
     # Data
     chart.data = [list(data.values())]
@@ -125,7 +149,7 @@ def generate_bar_chart(data):
 def generate_pie_chart_with_legend(data):
     drawing = Drawing(400, 200)
     pie = Pie()
-    pie.x = 50
+    pie.x = 100
     pie.y = 0
     pie.width = 150
     pie.height = 150
@@ -147,7 +171,7 @@ def generate_pie_chart_with_legend(data):
     drawing.add(pie)
 
     # Add legend
-    x_pos = 250
+    x_pos = 300
     y_pos = 130
     box_size = 10
     for i, (label, value) in enumerate(data.items()):
@@ -160,5 +184,5 @@ def generate_pie_chart_with_legend(data):
 # Generating the PDF
 if __name__ == "__main__":
     data_df = pd.read_csv("./data/combined_dummy_dataset.csv")
-    output_filename = "./data/jeremycomment_pdf.pdf"
+    output_filename = "./data/vasco_comment_pdf.pdf"
     generate_pdf(data_df, output_filename)
