@@ -26,8 +26,18 @@ def generate_pdf(data, output_filename):
     
     def on_each_page(canvas, doc):
         # Draw the logo on each page
-        canvas.drawInlineImage("./data/RedRoverIcon.png", 500, 20, width=100, height=100)
+        canvas.drawInlineImage("./data/RedRoverIcon.png", 520, 20, width=70, height=70)
 
+        # Draw a red border
+        border_color = HexColor("#993333")
+        border_thickness = 5
+        offset = 10
+        canvas.setStrokeColor(border_color)
+        canvas.setLineWidth(border_thickness)
+        canvas.rect(offset + border_thickness/2, 
+                    offset + border_thickness/2, 
+                    letter[0] - 2*offset - border_thickness, 
+                    letter[1] - 2*offset - border_thickness)
     
     template = PageTemplate(id='main', frames=frame, onPage=on_each_page)
     
@@ -64,7 +74,7 @@ def generate_pdf(data, output_filename):
 
 def add_title_page(elements, data, question, styles):
     # Logo
-    logo = Image("./data/RedRoverIcon.png", width=100, height=100)
+    logo = Image("./data/RedRoverIcon.png", width=150, height=150)
     elements.append(logo)
     
     # Question
@@ -91,9 +101,9 @@ def add_demographic_pie_charts(elements, group, styles):
         elements.append(Spacer(1, 12))
 
 def generate_bar_chart(data):
-    drawing = Drawing(400, 200)
+    drawing = Drawing(600, 300)
     chart = VerticalBarChart()
-    chart.x = 50
+    chart.x = 120
     chart.y = 50
     chart.height = 125
     chart.width = 300
@@ -149,6 +159,6 @@ def generate_pie_chart_with_legend(data):
 
 # Generating the PDF
 if __name__ == "__main__":
-    data_df = pd.read_csv("./data/exported_data - 2023-09-17T091545.392.csv")
-    output_filename = "./data/output_pdf.pdf"
+    data_df = pd.read_csv("./data/combined_dummy_dataset.csv")
+    output_filename = "./data/jeremycomment_pdf.pdf"
     generate_pdf(data_df, output_filename)
