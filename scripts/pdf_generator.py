@@ -1,6 +1,6 @@
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak, Image
+from reportlab.platypus import Paragraph, Spacer, PageBreak, Image, BaseDocTemplate, Frame, PageTemplate
 from reportlab.graphics.shapes import Drawing, String, Rect
 from reportlab.graphics.charts.barcharts import VerticalBarChart
 from reportlab.graphics.charts.piecharts import Pie
@@ -22,31 +22,43 @@ color_palette = [
 ]
 
 def generate_pdf(data, output_filename):
-    doc = SimpleDocTemplate(output_filename, pagesize=letter)
+    frame = Frame(0, 0, letter[0], letter[1], id='normal')
+    
+    def on_each_page(canvas, doc):
+        # Draw the logo on each page
+        canvas.drawInlineImage("./data/RedRoverIcon.png", 500, 20, width=100, height=100)
+
+    
+    template = PageTemplate(id='main', frames=frame, onPage=on_each_page)
+    
+    # Use BaseDocTemplate instead of SimpleDocTemplate
+    doc = BaseDocTemplate(output_filename, pagesize=letter)
+    doc.addPageTemplates(template)
+
     elements = []
     styles = getSampleStyleSheet()
-    
+
     # Group by question and answer
     grouped_data = data.groupby(['question', 'answer'])
-    
+
     added_questions = set()
-    
+
     for (question, answer), group in grouped_data:
         # Add title page for the question if not already added
         if question not in added_questions:
             add_title_page(elements, data, question, styles)
             added_questions.add(question)
-        
+
         # Add "Answer: _____" text only once per answer
         elements.append(Paragraph(f"Answer: {answer}", styles['Heading2']))
         elements.append(Spacer(1, 12))
-        
+
         # Add demographic pie charts
         add_demographic_pie_charts(elements, group, styles)
-        
+
         # Add a page break after each question-answer combination
         elements.append(PageBreak())
-    
+
     # Build the PDF
     doc.build(elements)
 
@@ -94,6 +106,9 @@ def generate_bar_chart(data):
     if len(chart.bars) > 0:
         chart.bars[0].fillColor = HexColor("#a91e22")
 
+    # Ensure the y-axis starts at 0
+    chart.valueAxis.valueMin = 0
+
     drawing.add(chart)
     return drawing
 
@@ -112,6 +127,8 @@ def generate_pie_chart_with_legend(data):
     pie.slices.strokeWidth = 0.5
     pie.slices.strokeColor = HexColor("#ffffff")
     pie.slices[0].popout = 10
+    total_votes = sum(data.values())
+
 
     # Color scheme (Removed infinite loop)
     for i in range(len(pie.slices)):
@@ -124,8 +141,9 @@ def generate_pie_chart_with_legend(data):
     y_pos = 130
     box_size = 10
     for i, (label, value) in enumerate(data.items()):
+        percentage = (value / total_votes) * 100  # Calculate percentage
         drawing.add(Rect(x_pos, y_pos - i * 15, box_size, box_size, fillColor=color_palette[i % len(color_palette)]))
-        drawing.add(String(x_pos + 15, y_pos - i * 15 + 2, f"{label} ({value}%)"))
+        drawing.add(String(x_pos + 15, y_pos - i * 15 + 2, f"{label} ({percentage:.1f}%)"))  # Display percentage
 
     return drawing
 
