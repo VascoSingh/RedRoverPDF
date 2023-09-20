@@ -183,6 +183,6 @@ def generate_pie_chart_with_legend(data):
 
 # Generating the PDF
 if __name__ == "__main__":
-    data_df = pd.read_csv("./data/combined_dummy_dataset.csv")
-    output_filename = "./data/vasco_comment_pdf.pdf"
+    data_df = pd.read_csv("./data/dummyDataFinal.csv")
+    output_filename = "./data/stress_test_pdf.pdf"
     generate_pdf(data_df, output_filename)
