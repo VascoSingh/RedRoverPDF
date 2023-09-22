@@ -6,22 +6,47 @@ from reportlab.graphics.charts.barcharts import VerticalBarChart
 from reportlab.graphics.charts.piecharts import Pie
 from reportlab.lib.colors import HexColor
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
+from colorsys import rgb_to_hls, hls_to_rgb
 
 import pandas as pd
 
 # Define color palette for pie charts
-color_palette = [
-    HexColor('#ffcc00'),
-    HexColor('#ff9900'),
-    HexColor('#ff6600'),
-    HexColor('#cc3399'),
-    HexColor('#990066'),
-    HexColor('#3399cc'),
-    HexColor('#006699'),
-    HexColor('#ccee66'),
-    HexColor('#99cc33'),
-    HexColor('#669900'),
-]
+# color_palette = [
+#     HexColor('#ffcc00'),
+#     HexColor('#ff9900'),
+#     HexColor('#ff6600'),
+#     HexColor('#cc3399'),
+#     HexColor('#990066'),
+#     HexColor('#3399cc'),
+#     HexColor('#006699'),
+#     HexColor('#ccee66'),
+#     HexColor('#99cc33'),
+#     HexColor('#669900'),
+# ]
+
+def generate_colors(base_color, step=0.2, lightness_factor=0.8):
+    """
+    Generates colors based on the provided base color. The colors are generated in the HSL color space by varying the hue.
+    :param base_color: A tuple representing the base RGB color, e.g., (255, 204, 0)
+    :param step: The step size for varying the hue in the HSL space.
+    :param lightness_factor: Factor to reduce the lightness for slightly darker colors.
+    :return: A generator that yields RGB colors.
+    """
+    r, g, b = [x/255.0 for x in base_color]
+    h, l, s = rgb_to_hls(r, g, b)
+    l *= lightness_factor  # Reduce the lightness
+    while True:
+        h = (h + step) % 1.0
+        r, g, b = hls_to_rgb(h, l, s)
+        yield (int(r * 255), int(g * 255), int(b * 255))
+
+# Initialize color palette with #c2152d
+color_palette = [HexColor('#c2152d')]
+
+# Generate additional colors for the palette
+color_generator = generate_colors((255, 204, 0))
+for _ in range(999):  # 999 colors to make the total palette size 1000
+    color_palette.append(HexColor('#' + ''.join(f'{int(val):02x}' for val in next(color_generator))))
 
 def generate_pdf(data, output_filename):
     frame = Frame(0, 0, letter[0], letter[1], id='normal')
@@ -136,6 +161,7 @@ def generate_bar_chart(data):
     chart.data = [list(data.values())]
     chart.categoryAxis.categoryNames = list(data.keys())
     chart.bars[0].fillColor = HexColor("#993333")
+    chart.bars[0].strokeColor = HexColor("#993333")
     # Assuming the first entry is the winner, change its color
     if len(chart.bars) > 0:
         chart.bars[0].fillColor = HexColor("#a91e22")
@@ -182,7 +208,7 @@ def generate_pie_chart_with_legend(data):
     for i, label in enumerate(sorted_labels):
         value = data[label]
         percentage = (value / total_votes) * 100  # Calculate percentage
-        drawing.add(Rect(x_pos, y_pos - i * 15, box_size, box_size, fillColor=color_palette[i % len(color_palette)]))
+        drawing.add(Rect(x_pos, y_pos - i * 15, box_size, box_size, fillColor=color_palette[i % len(color_palette)], strokeColor=color_palette[i % len(color_palette)]))
         drawing.add(String(x_pos + 15, y_pos - i * 15 + 2, f"{label} ({percentage:.1f}%)"))  # Display percentage
 
     return drawing
