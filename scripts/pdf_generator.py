@@ -10,20 +10,6 @@ from colorsys import rgb_to_hls, hls_to_rgb
 
 import pandas as pd
 
-# Define color palette for pie charts
-# color_palette = [
-#     HexColor('#ffcc00'),
-#     HexColor('#ff9900'),
-#     HexColor('#ff6600'),
-#     HexColor('#cc3399'),
-#     HexColor('#990066'),
-#     HexColor('#3399cc'),
-#     HexColor('#006699'),
-#     HexColor('#ccee66'),
-#     HexColor('#99cc33'),
-#     HexColor('#669900'),
-# ]
-
 def generate_colors(base_color, step=0.2, lightness_factor=0.8):
     """
     Generates colors based on the provided base color. The colors are generated in the HSL color space by varying the hue.
@@ -136,7 +122,7 @@ def add_demographic_pie_charts(elements, group, styles):
     demographics = [
         'educationLevel', 'gender', 'hispanicOrLatino', 'incomeLevel', 'lgbtq',
         'livingSituation', 'occupation', 'pet', 'politicalAffiliation', 'race',
-        'religion', 'school', 'state'
+        'religion', 'state', 'school'  # Moved 'school' to the end of the list
     ]
     for demo in demographics:
         demo_data = group[demo].value_counts().to_dict()
@@ -201,15 +187,67 @@ def generate_pie_chart_with_legend(data):
     
     drawing.add(pie)
 
-    # Add legend
-    x_pos = 300
-    y_pos = 130
+    # Add legend in two columns
+    x_pos = 270  # Starting x position
+    y_pos = 130  # Starting y position
     box_size = 10
+    items_per_column = len(sorted_labels) // 2 + len(sorted_labels) % 2
+
+    y_start = 130  # Set the starting y position
+    y_pos = y_start
+
+    max_chars_per_line = 30  # Maximum characters per line
+
+    y_pos_offsets = [0]  # List to store the y position offsets for each legend item
+
+    # First pass: Calculate y position offsets for each legend item based on the number of lines
     for i, label in enumerate(sorted_labels):
         value = data[label]
-        percentage = (value / total_votes) * 100  # Calculate percentage
-        drawing.add(Rect(x_pos, y_pos - i * 15, box_size, box_size, fillColor=color_palette[i % len(color_palette)], strokeColor=color_palette[i % len(color_palette)]))
-        drawing.add(String(x_pos + 15, y_pos - i * 15 + 2, f"{label} ({percentage:.1f}%)"))  # Display percentage
+        percentage = (value / total_votes) * 100
+        legend_text = f"{label} ({percentage:.1f}%)"
+
+        words = legend_text.split()
+        lines = []
+        current_line = words[0]
+        for word in words[1:]:
+            if len(current_line + ' ' + word) <= max_chars_per_line:
+                current_line += ' ' + word
+            else:
+                lines.append(current_line)
+                current_line = word
+        lines.append(current_line)
+
+        y_pos_offsets.append(len(lines) - 1)  # Store the y offset for this legend item
+
+    # Second pass: Draw the legend items using the calculated y position offsets
+    for i, label in enumerate(sorted_labels):
+        if i == items_per_column:
+            y_pos = y_start  # Reset y position when transitioning to second column
+        if i >= items_per_column:
+            x_pos = 415
+            y_pos -= y_pos_offsets[i - items_per_column + 1]  # Use the y position offset for this legend item
+        else:
+            y_pos -= y_pos_offsets[i]  # Use the y position offset for this legend item
+
+        value = data[label]
+        percentage = (value / total_votes) * 100
+        legend_text = f"{label} ({percentage:.1f}%)"
+
+        words = legend_text.split()
+        lines = []
+        current_line = words[0]
+        for word in words[1:]:
+            if len(current_line + ' ' + word) <= max_chars_per_line:
+                current_line += ' ' + word
+            else:
+                lines.append(current_line)
+                current_line = word
+        lines.append(current_line)
+
+        drawing.add(Rect(x_pos, y_pos, box_size, box_size, fillColor=color_palette[i % len(color_palette)], strokeColor=color_palette[i % len(color_palette)]))
+        for line in lines:
+            drawing.add(String(x_pos + 15, y_pos + 2, line))
+            y_pos -= 13.5
 
     return drawing
 
