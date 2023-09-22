@@ -153,28 +153,34 @@ def generate_pie_chart_with_legend(data):
     pie.y = 0
     pie.width = 150
     pie.height = 150
-    pie.data = list(data.values())
-    pie.labels = list(data.keys())
+
+    # Sort the data by values (from largest to smallest)
+    sorted_data = sorted(data.items(), key=lambda x: x[1], reverse=True)
+    sorted_labels = [item[0] for item in sorted_data]
+    sorted_values = [item[1] for item in sorted_data]
+
+    pie.data = sorted_values
+    pie.labels = sorted_labels
     pie.simpleLabels = 0
     pie.slices.label_pointer_piePad = 10
     pie.slices.fontColor = None
     pie.slices.strokeWidth = 0.5
     pie.slices.strokeColor = HexColor("#ffffff")
     pie.slices[0].popout = 10
-    total_votes = sum(data.values())
+    total_votes = sum(sorted_values)
 
-
-    # Color scheme (Removed infinite loop)
-    for i in range(len(pie.slices)):
+    # Assign colors to pie slices
+    for i in range(len(pie.data)):
         pie.slices[i].fillColor = color_palette[i % len(color_palette)]
-
+    
     drawing.add(pie)
 
     # Add legend
     x_pos = 300
     y_pos = 130
     box_size = 10
-    for i, (label, value) in enumerate(data.items()):
+    for i, label in enumerate(sorted_labels):
+        value = data[label]
         percentage = (value / total_votes) * 100  # Calculate percentage
         drawing.add(Rect(x_pos, y_pos - i * 15, box_size, box_size, fillColor=color_palette[i % len(color_palette)]))
         drawing.add(String(x_pos + 15, y_pos - i * 15 + 2, f"{label} ({percentage:.1f}%)"))  # Display percentage
@@ -184,5 +190,5 @@ def generate_pie_chart_with_legend(data):
 # Generating the PDF
 if __name__ == "__main__":
     data_df = pd.read_csv("./data/dummyDataFinal.csv")
-    output_filename = "./data/stress_test_pdf.pdf"
+    output_filename = "./data/sep21_test_pdf.pdf"
     generate_pdf(data_df, output_filename)
